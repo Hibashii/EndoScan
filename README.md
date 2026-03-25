@@ -39,6 +39,11 @@ uvicorn main:app --reload
 
 **Citizen Scientist** — Autonomie, transparence, capacité d'investigation
 
-## Équipe
+## 👥 Équipe
+
+* **Hiba IAZZA**
+* **Yasmine MAZGHI**
+* **Safia FIRITI**
+* **Douae RATBI**
 
 Projet de Fin d'Apprentissage — EPITA 2026
