@@ -1,0 +1,144 @@
+import { useState } from "react";
+import { MOCK_PRODUCTS } from "../data/mockData";
+import { riskColor, riskLabel, vigilanceScore } from "../data/utils";
+
+export default function SearchPage() {
+  const [query, setQuery] = useState("");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [notFound, setNotFound] = useState(false);
+
+  const handleSearch = (code) => {
+    const searchCode = code || query.trim();
+    if (!searchCode) return;
+    setQuery(searchCode);
+    setLoading(true);
+    setNotFound(false);
+    setResult(null);
+
+    // Simule un appel API — à remplacer par fetch('/api/analyze/{barcode}')
+    setTimeout(() => {
+      const product = MOCK_PRODUCTS[searchCode];
+      if (product) {
+        setResult(product);
+      } else {
+        setNotFound(true);
+      }
+      setLoading(false);
+    }, 800);
+  };
+
+  const score = vigilanceScore(result);
+  const sampleCodes = Object.entries(MOCK_PRODUCTS).map(([code, p]) => ({ code, name: p.name }));
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
+      <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Rechercher un produit</h1>
+      <p className="text-gray-500 text-sm mt-1 mb-6">Entrez un code-barres pour analyser les perturbateurs endocriniens thyroïdiens</p>
+
+      {/* Search bar */}
+      <div className="flex gap-2 mb-3">
+        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          placeholder="Code-barres (ex: 3017620422003)"
+          className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white" />
+        <button onClick={() => handleSearch()}
+          className="px-5 py-3 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700 transition-colors active:scale-95">
+          Analyser
+        </button>
+      </div>
+
+      {/* Sample codes */}
+      <div className="flex flex-wrap gap-1.5 mb-6">
+        <span className="text-[10px] text-gray-400 self-center mr-1">Essayez :</span>
+        {sampleCodes.map(s => (
+          <button key={s.code} onClick={() => handleSearch(s.code)}
+            className="text-[10px] px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-teal-300 hover:text-teal-600 transition-colors">
+            {s.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
+          <span className="ml-3 text-sm text-gray-500">Analyse en cours...</span>
+        </div>
+      )}
+
+      {/* Not found */}
+      {notFound && (
+        <div className="bg-gray-50 rounded-2xl p-8 text-center">
+          <p className="text-gray-400 text-lg mb-1">Produit non trouvé</p>
+          <p className="text-gray-400 text-xs">Essayez un des codes-barres de démonstration ci-dessus</p>
+        </div>
+      )}
+
+      {/* Result */}
+      {result && score && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Product header */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-lg font-bold text-gray-900">{result.name}</p>
+                <p className="text-sm text-gray-500">{result.brand} · {result.category}</p>
+                <span className={`inline-block mt-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full
+                  ${result.source === "food" ? "bg-amber-50 text-amber-700" : "bg-purple-50 text-purple-700"}`}>
+                  {result.source === "food" ? "🍽 Alimentaire" : "💄 Cosmétique"}
+                </span>
+              </div>
+              <div className={`text-center px-4 py-3 rounded-2xl shrink-0
+                ${score.color === "red" ? "bg-red-50" : score.color === "amber" ? "bg-amber-50" : "bg-emerald-50"}`}>
+                <p className={`text-2xl font-bold
+                  ${score.color === "red" ? "text-red-600" : score.color === "amber" ? "text-amber-600" : "text-emerald-600"}`}>
+                  {result.matched.length}/{result.ingredients.length}
+                </p>
+                <p className="text-[10px] text-gray-500 mt-0.5">à risque</p>
+                <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-lg text-white
+                  ${score.color === "red" ? "bg-red-500" : score.color === "amber" ? "bg-amber-500" : "bg-emerald-500"}`}>
+                  {score.label}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Ingredients list */}
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">
+              Ingrédients analysés ({result.ingredients.length})
+            </h3>
+            <div className="space-y-2">
+              {result.matched.map((m, i) => {
+                const c = riskColor(m.risk);
+                return (
+                  <div key={`m-${i}`} className={`${c.bg} rounded-xl px-4 py-3 flex items-start gap-3`}>
+                    <div className={`w-2 h-2 ${c.dot} rounded-full mt-1.5 shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold ${c.text}`}>{m.name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{m.note}</p>
+                    </div>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full text-white ${c.badge} shrink-0`}>
+                      {riskLabel(m.risk)}
+                    </span>
+                  </div>
+                );
+              })}
+              {result.ingredients
+                .filter(ing => !result.matched.some(m => m.name.toLowerCase() === ing.toLowerCase()))
+                .map((ing, i) => (
+                  <div key={`s-${i}`} className="flex items-center gap-3 px-4 py-2">
+                    <div className="w-2 h-2 bg-emerald-400 rounded-full shrink-0" />
+                    <span className="text-sm text-gray-600">{ing}</span>
+                    <span className="text-[10px] text-gray-400 ml-auto">OK</span>
+                  </div>
+                ))
+              }
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
