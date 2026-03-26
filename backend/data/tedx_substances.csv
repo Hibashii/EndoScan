@@ -1,0 +1,26 @@
+cas,name,risk,effects
+3380-34-5,triclosan,high,"thyroid,reproductive"
+3380-34-5,irgasan,high,"thyroid,reproductive"
+80-05-7,bisphenol a,high,"thyroid,reproductive,neurological"
+80-05-7,bpa,high,"thyroid,reproductive,neurological"
+99-76-3,methylparaben,medium,"thyroid,reproductive"
+99-76-3,methyl paraben,medium,"thyroid,reproductive"
+94-26-8,butylparaben,high,"thyroid,reproductive"
+94-26-8,butyl paraben,high,"thyroid,reproductive"
+131-57-7,benzophenone-3,medium,thyroid
+131-57-7,oxybenzone,medium,thyroid
+84-74-2,dibutyl phthalate,high,"thyroid,reproductive,developmental"
+84-74-2,dbp,high,"thyroid,reproductive,developmental"
+1912-24-9,atrazine,high,"thyroid,reproductive"
+32534-81-9,pentabromodiphenyl ether,high,"thyroid,neurological"
+32534-81-9,pbde,high,"thyroid,neurological"
+115-96-8,tris(2-chloroethyl) phosphate,medium,thyroid
+115-96-8,tcep,medium,thyroid
+1763-23-1,pfos,high,"thyroid,immune,reproductive"
+1763-23-1,perfluorooctane sulfonate,high,"thyroid,immune,reproductive"
+50-28-2,estradiol,medium,"thyroid,reproductive"
+50-28-2,17beta-estradiol,medium,"thyroid,reproductive"
+118-74-1,hexachlorobenzene,high,"thyroid,immune"
+118-74-1,hcb,high,"thyroid,immune"
+1336-36-3,pcb,high,"thyroid,neurological,reproductive"
+1336-36-3,polychlorinated biphenyl,high,"thyroid,neurological,reproductive"
