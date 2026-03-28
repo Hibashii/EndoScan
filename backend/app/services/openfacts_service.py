@@ -193,3 +193,53 @@ async def fetch_product_info(barcode: str) -> dict:
         status_code=404,
         detail="Produit non trouvé (ni en local, ni sur Open Food/Beauty Facts)"
     )
+
+
+# ═══════════════════════════════════════════
+# NAME SEARCH (local CSVs only)
+# ═══════════════════════════════════════════
+
+def search_products_by_name(query: str, limit: int = 10) -> list[dict]:
+    """Search products by name across all local CSV indexes.
+
+    Returns up to `limit` results, sorted by relevance (exact match > starts with > contains).
+    """
+    q = query.strip().lower()
+    if not q:
+        return []
+
+    exact: list[dict] = []
+    starts: list[dict] = []
+    contains: list[dict] = []
+
+    for index, source_label in [(_FOOD_INDEX, "food"), (_BEAUTY_INDEX, "beauty")]:
+        for code, product in index.items():
+            name = (product.get("name") or "").lower()
+            if not name or name == "produit inconnu":
+                continue
+
+            if name == q:
+                exact.append(_to_search_result(product))
+            elif name.startswith(q):
+                starts.append(_to_search_result(product))
+            elif q in name:
+                contains.append(_to_search_result(product))
+
+            # Early exit if we have enough
+            if len(exact) + len(starts) + len(contains) >= limit * 3:
+                break
+
+    # Combine: exact matches first, then starts-with, then contains
+    results = exact + starts + contains
+    return results[:limit]
+
+
+def _to_search_result(product: dict) -> dict:
+    """Convert a local product dict to a search result."""
+    return {
+        "barcode": product["barcode"],
+        "name": product["name"],
+        "source": product["source"],
+        "ingredient_count": len(product.get("ingredients", [])),
+    }
+

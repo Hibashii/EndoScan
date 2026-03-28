@@ -29,3 +29,10 @@ class AnalyzeResponse(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+class SearchResult(BaseModel):
+    barcode: str
+    name: str
+    source: str              # "food" | "beauty"
+    ingredient_count: int
