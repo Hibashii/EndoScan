@@ -5,15 +5,40 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @keyframes scanLine {
   0%, 100% { top: 10%; }
   50% { top: 85%; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(1.4); opacity: 0; }
 }
 
 .animate-fade-in {
   animation: fadeIn 0.4s ease-out;
 }
 
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s ease-out both;
+}
+
 .animate-scan-line {
   animation: scanLine 2s ease-in-out infinite;
 }
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s ease-out infinite;
+}
+
+/* Staggered animations */
+.stagger-1 { animation-delay: 0.05s; }
+.stagger-2 { animation-delay: 0.1s; }
+.stagger-3 { animation-delay: 0.15s; }
+.stagger-4 { animation-delay: 0.2s; }
+.stagger-5 { animation-delay: 0.25s; }
