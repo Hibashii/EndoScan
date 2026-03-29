@@ -1,7 +1,7 @@
 import MetricCard from "../components/MetricCard";
 import HBar from "../components/HBar";
 import EffectTag from "../components/EffectTag";
-import { DASHBOARD_STATS, EFFECT_CATEGORIES } from "../data/mockData";
+import { DASHBOARD_STATS, EFFECT_CATEGORIES } from "../data/realData";
 
 const EFFECT_BAR_COLORS = {
   estrogenic:   "bg-pink-500",

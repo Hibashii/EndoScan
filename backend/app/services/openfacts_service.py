@@ -87,7 +87,7 @@ logger.info(
 )
 
 
-def _search_local(barcode: str) -> dict | None:
+def _search_local(barcode: str) -> dict:
     """Search local CSV indexes for a product by barcode."""
     # Try food first (larger dataset usually), then beauty
     product = _FOOD_INDEX.get(barcode)
@@ -105,7 +105,7 @@ def _search_local(barcode: str) -> dict | None:
 # ONLINE API FALLBACK
 # ═══════════════════════════════════════════
 
-async def _fetch_product_api(url: str, barcode: str) -> dict | None:
+async def _fetch_product_api(url: str, barcode: str) -> dict:
     """Fetch a product from an Open*Facts API. Returns the product dict or None."""
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -139,7 +139,7 @@ def _parse_ingredients_api(product: dict) -> list[str]:
     return []
 
 
-async def _search_api(barcode: str) -> dict | None:
+async def _search_api(barcode: str) -> dict :
     """Try Open Food Facts API first, then Open Beauty Facts API."""
     product = await _fetch_product_api(settings.OPEN_FOOD_FACTS_URL, barcode)
     source = "food"
