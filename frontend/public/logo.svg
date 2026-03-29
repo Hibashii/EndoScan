@@ -1,0 +1,13 @@
+<svg viewBox="-20 -20 40 40" xmlns="http://www.w3.org/2000/svg">
+  <polygon points="0,-14 12,-7 12,7 0,14 -12,7 -12,-7" fill="none" stroke="#6366f1" stroke-width="2" stroke-linejoin="round"/>
+  <circle cx="0" cy="-14" r="3" fill="#6366f1"/>
+  <circle cx="12" cy="-7" r="3" fill="#8b5cf6"/>
+  <circle cx="12" cy="7" r="3" fill="#6366f1"/>
+  <circle cx="0" cy="14" r="3" fill="#8b5cf6"/>
+  <circle cx="-12" cy="7" r="3" fill="#6366f1"/>
+  <circle cx="-12" cy="-7" r="3" fill="#8b5cf6"/>
+  <circle cx="0" cy="0" r="2" fill="#6366f1"/>
+  <path d="M -14,-16 A 22,22 0 0,1 14,-16" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="15" cy="0" r="2" fill="#f43f5e" opacity="0.9"/>
+  <circle cx="-15" cy="0" r="2" fill="#22c55e" opacity="0.9"/>
+</svg>
