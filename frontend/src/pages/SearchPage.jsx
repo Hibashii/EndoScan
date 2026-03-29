@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
+import { BrowserMultiFormatReader } from '@zxing/browser';
 import { MOCK_PRODUCTS } from "../data/mockData";
 import { riskColor, riskLabel, vigilanceScore } from "../data/utils";
 
@@ -8,15 +9,23 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
 
+  // --- États et Références pour le Scanner Caméra ---
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanError, setScanError] = useState("");
+  const videoRef = useRef(null);
+  const controlsRef = useRef(null);
+
+  // Fonction pour lancer la recherche
   const handleSearch = (code) => {
     const searchCode = code || query.trim();
     if (!searchCode) return;
+    
     setQuery(searchCode);
     setLoading(true);
     setNotFound(false);
     setResult(null);
 
-    // Simule un appel API — à remplacer par fetch('/api/analyze/{barcode}')
+    // Simule un appel API
     setTimeout(() => {
       const product = MOCK_PRODUCTS[searchCode];
       if (product) {
@@ -28,27 +37,98 @@ export default function SearchPage() {
     }, 800);
   };
 
+  // --- Fonctions du Scanner ---
+  const startScan = async () => {
+    setIsScanning(true);
+    setScanError("");
+    setResult(null);
+    
+    try {
+      const codeReader = new BrowserMultiFormatReader();
+      controlsRef.current = await codeReader.decodeFromVideoDevice(
+        null, 
+        videoRef.current, 
+        (scanResult, error) => {
+          if (scanResult) {
+            const codeScanne = scanResult.getText();
+            stopScan(); // 1. On éteint la caméra
+            setQuery(codeScanne); // 2. On écrit le code dans le champ textuel
+            handleSearch(codeScanne); // 3. On lance la recherche automatiquement
+          }
+          if (error && error.name !== 'NotFoundException') {
+            console.error(error);
+          }
+        }
+      );
+    } catch (err) {
+      console.error(err);
+      setScanError("Impossible d'accéder à la caméra. Vérifiez les permissions.");
+      setIsScanning(false);
+    }
+  };
+
+  const stopScan = () => {
+    if (controlsRef.current) {
+      controlsRef.current.stop();
+    }
+    setIsScanning(false);
+  };
+
+  // Sécurité : couper la caméra si on quitte la page
+  useEffect(() => {
+    return () => stopScan();
+  }, []);
+
   const score = vigilanceScore(result);
   const sampleCodes = Object.entries(MOCK_PRODUCTS).map(([code, p]) => ({ code, name: p.name }));
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
       <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Rechercher un produit</h1>
-      <p className="text-gray-500 text-sm mt-1 mb-6">Entrez un code-barres pour analyser les perturbateurs endocriniens thyroïdiens</p>
+      <p className="text-gray-500 text-sm mt-1 mb-6">Entrez ou scannez un code-barres pour analyser les perturbateurs endocriniens</p>
 
-      {/* Search bar */}
+      {/* Barre de recherche avec le nouveau bouton Scan */}
       <div className="flex gap-2 mb-3">
-        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+        <input 
+          type="text" 
+          value={query} 
+          onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           placeholder="Code-barres (ex: 3017620422003)"
-          className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white" />
-        <button onClick={() => handleSearch()}
+          className="flex-1 px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent bg-white" 
+        />
+        
+        {/* Bouton pour ouvrir la caméra */}
+        <button 
+          onClick={isScanning ? stopScan : startScan}
+          className={`px-4 py-3 text-white rounded-xl text-xl font-medium transition-colors active:scale-95 flex items-center justify-center
+            ${isScanning ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-800 hover:bg-gray-900'}`}
+          title={isScanning ? "Fermer la caméra" : "Scanner un code-barres"}
+        >
+          {isScanning ? '✖' : '📷'}
+        </button>
+
+        <button 
+          onClick={() => handleSearch()}
           className="px-5 py-3 bg-teal-600 text-white rounded-xl text-sm font-medium hover:bg-teal-700 transition-colors active:scale-95">
           Analyser
         </button>
       </div>
 
-      {/* Sample codes */}
+      {scanError && <p className="text-red-500 text-sm mb-4">{scanError}</p>}
+
+      {/* Zone Vidéo du Scanner (Affichée uniquement si isScanning est vrai) */}
+      {isScanning && (
+        <div className="mb-6 rounded-2xl overflow-hidden border-4 border-teal-500 shadow-lg bg-black relative animate-fade-in">
+          <video ref={videoRef} className="w-full h-64 object-cover" />
+          <div className="absolute inset-0 border-2 border-white/30 m-8 rounded-xl pointer-events-none"></div>
+          <p className="absolute bottom-4 left-0 right-0 text-center text-white text-xs font-semibold bg-black/50 py-1">
+            Placez le code-barres au centre
+          </p>
+        </div>
+      )}
+
+      {/* Codes d'exemples */}
       <div className="flex flex-wrap gap-1.5 mb-6">
         <span className="text-[10px] text-gray-400 self-center mr-1">Essayez :</span>
         {sampleCodes.map(s => (
@@ -59,7 +139,7 @@ export default function SearchPage() {
         ))}
       </div>
 
-      {/* Loading */}
+      {/* Chargement */}
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
@@ -67,15 +147,15 @@ export default function SearchPage() {
         </div>
       )}
 
-      {/* Not found */}
+      {/* Produit non trouvé */}
       {notFound && (
-        <div className="bg-gray-50 rounded-2xl p-8 text-center">
+        <div className="bg-gray-50 rounded-2xl p-8 text-center animate-fade-in">
           <p className="text-gray-400 text-lg mb-1">Produit non trouvé</p>
           <p className="text-gray-400 text-xs">Essayez un des codes-barres de démonstration ci-dessus</p>
         </div>
       )}
 
-      {/* Result */}
+      {/* Résultat (Ton code d'origine intact) */}
       {result && score && (
         <div className="space-y-4 animate-fade-in">
           {/* Product header */}
