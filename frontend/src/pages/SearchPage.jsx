@@ -3,15 +3,11 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import { MOCK_PRODUCTS } from "../data/mockData";
 import { riskColor, riskLabel, vigilanceScore } from "../data/utils";
 
-const isBarcode = (str) => /^\d+$/.test(str.trim());
-
-export default function SearchPage({ initialCode, clearInitialCode }) {
+export default function SearchPage() {
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState(null);        // single product analysis
-  const [searchResults, setSearchResults] = useState(null); // name search results
+  const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
-  const [error, setError] = useState(null);
 
   // --- États et Références pour le Scanner Caméra ---
   const [isScanning, setIsScanning] = useState(false);
@@ -20,7 +16,8 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
   const controlsRef = useRef(null);
 
   // Fonction pour lancer la recherche
-  const handleSearch = (code) => {
+  // Fonction pour lancer la recherche (connectée au VRAI Backend)
+  const handleSearch = async (code) => {
     const searchCode = code || query.trim();
     if (!searchCode) return;
     
@@ -29,16 +26,24 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
     setNotFound(false);
     setResult(null);
 
-    // Simule un appel API
-    setTimeout(() => {
-      const product = MOCK_PRODUCTS[searchCode];
-      if (product) {
-        setResult(product);
-      } else {
+    try {
+      // 🚀 APPEL AU VRAI BACKEND PYTHON
+      const response = await fetch(`http://localhost:8000/api/analyze/${searchCode}`);
+      
+      if (!response.ok) {
+        // Si le backend renvoie une erreur (ex: produit non trouvé)
         setNotFound(true);
+      } else {
+        // Si le backend trouve le produit et calcule les risques
+        const realData = await response.json();
+        setResult(realData);
       }
+    } catch (error) {
+      console.error("Erreur de connexion au serveur Python :", error);
+      setNotFound(true);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   // --- Fonctions du Scanner ---
@@ -84,7 +89,7 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
   }, []);
 
   const score = vigilanceScore(result);
-  const allEffects = result ? collectEffects(result.matched) : [];
+  const sampleCodes = Object.entries(MOCK_PRODUCTS).map(([code, p]) => ({ code, name: p.name }));
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
@@ -122,15 +127,16 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
       {scanError && <p className="text-red-500 text-sm mb-4">{scanError}</p>}
 
       {/* Zone Vidéo du Scanner (Affichée uniquement si isScanning est vrai) */}
-      {isScanning && (
-        <div className="mb-6 rounded-2xl overflow-hidden border-4 border-teal-500 shadow-lg bg-black relative animate-fade-in">
-          <video ref={videoRef} className="w-full h-64 object-cover" />
-          <div className="absolute inset-0 border-2 border-white/30 m-8 rounded-xl pointer-events-none"></div>
-          <p className="absolute bottom-4 left-0 right-0 text-center text-white text-xs font-semibold bg-black/50 py-1">
-            Placez le code-barres au centre
-          </p>
-        </div>
-      )}
+     {/* Zone Vidéo du Scanner (Toujours dans le code, mais invisible si inactive) */}
+      <div className={`mb-6 rounded-2xl overflow-hidden border-4 border-teal-500 shadow-lg bg-black relative animate-fade-in ${isScanning ? 'block' : 'hidden'}`}>
+        {/* Ajout de playsInline et muted pour débloquer la caméra sur iPhone/Mobile */}
+        <video ref={videoRef} className="w-full h-64 object-cover" playsInline muted />
+        
+        <div className="absolute inset-0 border-2 border-white/30 m-8 rounded-xl pointer-events-none"></div>
+        <p className="absolute bottom-4 left-0 right-0 text-center text-white text-xs font-semibold bg-black/50 py-1">
+          Placez le code-barres au centre
+        </p>
+      </div>
 
       {/* Codes d'exemples */}
       <div className="flex flex-wrap gap-1.5 mb-6">
@@ -146,8 +152,8 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
       {/* Chargement */}
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          <span className="ml-3 text-sm text-slate-500">Recherche en cours...</span>
+          <div className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
+          <span className="ml-3 text-sm text-gray-500">Analyse en cours...</span>
         </div>
       )}
 
@@ -155,29 +161,18 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
       {notFound && (
         <div className="bg-gray-50 rounded-2xl p-8 text-center animate-fade-in">
           <p className="text-gray-400 text-lg mb-1">Produit non trouvé</p>
-          <p className="text-gray-400 text-xs">Essayez un des codes-barres de démonstration ci-dessus</p>
         </div>
       )}
 
       {/* Résultat (Ton code d'origine intact) */}
       {result && score && (
         <div className="space-y-4 animate-fade-in">
-          {/* Back to results button (if came from name search) */}
-          {!isBarcode(query) && (
-            <button onClick={() => searchByName(query)}
-              className="text-xs text-indigo-600 hover:text-indigo-800 cursor-pointer">
-              ← Retour aux résultats
-            </button>
-          )}
-
           {/* Product header */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-lg font-bold text-slate-900">{result.name}</p>
-                <p className="text-sm text-slate-500">
-                  {[result.brand, result.category].filter(v => v && v !== "Inconnu" && v !== "Marque inconnue").join(" · ") || null}
-                </p>
+                <p className="text-lg font-bold text-gray-900">{result.name}</p>
+                <p className="text-sm text-gray-500">{result.brand} · {result.category}</p>
                 <span className={`inline-block mt-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full
                   ${result.source === "food" ? "bg-amber-50 text-amber-700" : "bg-purple-50 text-purple-700"}`}>
                   {result.source === "food" ? "🍽 Alimentaire" : "💄 Cosmétique"}
@@ -189,56 +184,33 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
                   ${score.color === "red" ? "text-red-600" : score.color === "amber" ? "text-amber-600" : "text-emerald-600"}`}>
                   {result.matched.length}/{result.ingredients.length}
                 </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">à risque</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">à risque</p>
                 <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-lg text-white
                   ${score.color === "red" ? "bg-red-500" : score.color === "amber" ? "bg-amber-500" : "bg-emerald-500"}`}>
                   {score.label}
                 </span>
               </div>
             </div>
-
-            {/* Effect summary tags */}
-            {allEffects.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-slate-100">
-                <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-2">Effets endocriniens détectés</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {allEffects.map(e => (
-                    <EffectTag key={e} effect={e} size="md" />
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Ingredients list */}
-          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900 mb-3">
+          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <h3 className="text-sm font-semibold text-gray-900 mb-3">
               Ingrédients analysés ({result.ingredients.length})
             </h3>
             <div className="space-y-2">
               {result.matched.map((m, i) => {
                 const c = riskColor(m.risk);
                 return (
-                  <div key={`m-${i}`} className={`${c.bg} rounded-xl px-4 py-3 animate-fade-in-up stagger-${i + 1}`}>
-                    <div className="flex items-start gap-3">
-                      <div className={`w-2 h-2 ${c.dot} rounded-full mt-1.5 shrink-0`} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className={`text-sm font-semibold ${c.text}`}>{m.name}</p>
-                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full text-white ${c.badge}`}>
-                            {riskLabel(m.risk)}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-0.5">{m.note}</p>
-                        {m.effects && m.effects.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {m.effects.map(e => (
-                              <EffectTag key={e} effect={e} size="sm" />
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                  <div key={`m-${i}`} className={`${c.bg} rounded-xl px-4 py-3 flex items-start gap-3`}>
+                    <div className={`w-2 h-2 ${c.dot} rounded-full mt-1.5 shrink-0`} />
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-semibold ${c.text}`}>{m.name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{m.note}</p>
                     </div>
+                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full text-white ${c.badge} shrink-0`}>
+                      {riskLabel(m.risk)}
+                    </span>
                   </div>
                 );
               })}
@@ -247,8 +219,8 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
                 .map((ing, i) => (
                   <div key={`s-${i}`} className="flex items-center gap-3 px-4 py-2">
                     <div className="w-2 h-2 bg-emerald-400 rounded-full shrink-0" />
-                    <span className="text-sm text-slate-600">{ing}</span>
-                    <span className="text-[10px] text-slate-400 ml-auto">OK</span>
+                    <span className="text-sm text-gray-600">{ing}</span>
+                    <span className="text-[10px] text-gray-400 ml-auto">OK</span>
                   </div>
                 ))
               }

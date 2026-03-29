@@ -3,7 +3,6 @@ import { BarChart3, Search, Camera } from "lucide-react";
 const tabs = [
   { id: "dashboard", label: "Explorer",   Icon: BarChart3 },
   { id: "search",    label: "Rechercher", Icon: Search },
-  { id: "scan",      label: "Scanner",    Icon: Camera },
 ];
 
 export default function Navbar({ page, setPage }) {

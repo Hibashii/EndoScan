@@ -2,7 +2,6 @@ import { useState } from "react";
 import Navbar from "./components/Navbar";
 import DashboardPage from "./pages/DashboardPage";
 import SearchPage from "./pages/SearchPage";
-import ScanPage from "./pages/ScanPage";
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
@@ -19,7 +18,6 @@ export default function App() {
       <main>
         {page === "dashboard" && <DashboardPage />}
         {page === "search" && <SearchPage initialCode={initialCode} clearInitialCode={() => setInitialCode(null)} />}
-        {page === "scan" && <ScanPage goToSearch={goToSearch} />}
       </main>
     </div>
   );
