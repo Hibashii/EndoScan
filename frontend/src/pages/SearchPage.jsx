@@ -3,11 +3,15 @@ import { BrowserMultiFormatReader } from '@zxing/browser';
 import { MOCK_PRODUCTS } from "../data/mockData";
 import { riskColor, riskLabel, vigilanceScore } from "../data/utils";
 
-export default function SearchPage() {
+const isBarcode = (str) => /^\d+$/.test(str.trim());
+
+export default function SearchPage({ initialCode, clearInitialCode }) {
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState(null);        // single product analysis
+  const [searchResults, setSearchResults] = useState(null); // name search results
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState(null);
 
   // --- États et Références pour le Scanner Caméra ---
   const [isScanning, setIsScanning] = useState(false);
@@ -80,7 +84,7 @@ export default function SearchPage() {
   }, []);
 
   const score = vigilanceScore(result);
-  const sampleCodes = Object.entries(MOCK_PRODUCTS).map(([code, p]) => ({ code, name: p.name }));
+  const allEffects = result ? collectEffects(result.matched) : [];
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
@@ -142,8 +146,8 @@ export default function SearchPage() {
       {/* Chargement */}
       {loading && (
         <div className="flex items-center justify-center py-12">
-          <div className="w-8 h-8 border-2 border-teal-200 border-t-teal-600 rounded-full animate-spin" />
-          <span className="ml-3 text-sm text-gray-500">Analyse en cours...</span>
+          <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+          <span className="ml-3 text-sm text-slate-500">Recherche en cours...</span>
         </div>
       )}
 
@@ -158,12 +162,22 @@ export default function SearchPage() {
       {/* Résultat (Ton code d'origine intact) */}
       {result && score && (
         <div className="space-y-4 animate-fade-in">
+          {/* Back to results button (if came from name search) */}
+          {!isBarcode(query) && (
+            <button onClick={() => searchByName(query)}
+              className="text-xs text-indigo-600 hover:text-indigo-800 cursor-pointer">
+              ← Retour aux résultats
+            </button>
+          )}
+
           {/* Product header */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-lg font-bold text-gray-900">{result.name}</p>
-                <p className="text-sm text-gray-500">{result.brand} · {result.category}</p>
+                <p className="text-lg font-bold text-slate-900">{result.name}</p>
+                <p className="text-sm text-slate-500">
+                  {[result.brand, result.category].filter(v => v && v !== "Inconnu" && v !== "Marque inconnue").join(" · ") || null}
+                </p>
                 <span className={`inline-block mt-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full
                   ${result.source === "food" ? "bg-amber-50 text-amber-700" : "bg-purple-50 text-purple-700"}`}>
                   {result.source === "food" ? "🍽 Alimentaire" : "💄 Cosmétique"}
@@ -175,33 +189,56 @@ export default function SearchPage() {
                   ${score.color === "red" ? "text-red-600" : score.color === "amber" ? "text-amber-600" : "text-emerald-600"}`}>
                   {result.matched.length}/{result.ingredients.length}
                 </p>
-                <p className="text-[10px] text-gray-500 mt-0.5">à risque</p>
+                <p className="text-[10px] text-slate-500 mt-0.5">à risque</p>
                 <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-lg text-white
                   ${score.color === "red" ? "bg-red-500" : score.color === "amber" ? "bg-amber-500" : "bg-emerald-500"}`}>
                   {score.label}
                 </span>
               </div>
             </div>
+
+            {/* Effect summary tags */}
+            {allEffects.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-2">Effets endocriniens détectés</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {allEffects.map(e => (
+                    <EffectTag key={e} effect={e} size="md" />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Ingredients list */}
-          <div className="bg-white rounded-2xl border border-gray-100 p-5">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <h3 className="text-sm font-semibold text-slate-900 mb-3">
               Ingrédients analysés ({result.ingredients.length})
             </h3>
             <div className="space-y-2">
               {result.matched.map((m, i) => {
                 const c = riskColor(m.risk);
                 return (
-                  <div key={`m-${i}`} className={`${c.bg} rounded-xl px-4 py-3 flex items-start gap-3`}>
-                    <div className={`w-2 h-2 ${c.dot} rounded-full mt-1.5 shrink-0`} />
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-semibold ${c.text}`}>{m.name}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{m.note}</p>
+                  <div key={`m-${i}`} className={`${c.bg} rounded-xl px-4 py-3 animate-fade-in-up stagger-${i + 1}`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`w-2 h-2 ${c.dot} rounded-full mt-1.5 shrink-0`} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className={`text-sm font-semibold ${c.text}`}>{m.name}</p>
+                          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full text-white ${c.badge}`}>
+                            {riskLabel(m.risk)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-0.5">{m.note}</p>
+                        {m.effects && m.effects.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {m.effects.map(e => (
+                              <EffectTag key={e} effect={e} size="sm" />
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full text-white ${c.badge} shrink-0`}>
-                      {riskLabel(m.risk)}
-                    </span>
                   </div>
                 );
               })}
@@ -210,8 +247,8 @@ export default function SearchPage() {
                 .map((ing, i) => (
                   <div key={`s-${i}`} className="flex items-center gap-3 px-4 py-2">
                     <div className="w-2 h-2 bg-emerald-400 rounded-full shrink-0" />
-                    <span className="text-sm text-gray-600">{ing}</span>
-                    <span className="text-[10px] text-gray-400 ml-auto">OK</span>
+                    <span className="text-sm text-slate-600">{ing}</span>
+                    <span className="text-[10px] text-slate-400 ml-auto">OK</span>
                   </div>
                 ))
               }

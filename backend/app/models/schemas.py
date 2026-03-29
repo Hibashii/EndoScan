@@ -3,7 +3,8 @@ from pydantic import BaseModel
 
 class MatchedIngredient(BaseModel):
     name: str
-    risk: str   # "high" | "medium" | "low"
+    risk: str                # "high" | "medium" | "low"
+    effects: list[str]       # ["thyroid", "estrogenic", "reproductive", ...]
     note: str
 
 
@@ -12,7 +13,7 @@ class ProductResponse(BaseModel):
     name: str
     brand: str
     category: str
-    source: str  # "food" | "beauty"
+    source: str              # "food" | "beauty"
     ingredients: list[str]
 
 
@@ -58,3 +59,10 @@ class DashboardStats(BaseModel):
 
 class ErrorResponse(BaseModel):
     detail: str
+
+
+class SearchResult(BaseModel):
+    barcode: str
+    name: str
+    source: str              # "food" | "beauty"
+    ingredient_count: int

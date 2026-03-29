@@ -6,14 +6,20 @@ import ScanPage from "./pages/ScanPage";
 
 export default function App() {
   const [page, setPage] = useState("dashboard");
+  const [initialCode, setInitialCode] = useState(null);
+
+  const goToSearch = (code) => {
+    setInitialCode(code || null);
+    setPage("search");
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50">
       <Navbar page={page} setPage={setPage} />
       <main>
         {page === "dashboard" && <DashboardPage />}
-        {page === "search" && <SearchPage />}
-        {page === "scan" && <ScanPage setPage={setPage} />}
+        {page === "search" && <SearchPage initialCode={initialCode} clearInitialCode={() => setInitialCode(null)} />}
+        {page === "scan" && <ScanPage goToSearch={goToSearch} />}
       </main>
     </div>
   );

@@ -1,20 +1,29 @@
 import re
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
-from app.models.schemas import AnalyzeResponse, DashboardStats, ProductResponse
-from app.services.openfacts_service import fetch_product_info
+from app.models.schemas import AnalyzeResponse, ProductResponse, SearchResult
+from app.services.openfacts_service import fetch_product_info, search_products_by_name
 from app.services.tedx_service import match_ingredients
 from app.services import stats_service
 
 router = APIRouter(prefix="/api")
 
-BARCODE_RE = re.compile(r"^\d{8,14}$")
+BARCODE_RE = re.compile(r"^\d+$")
 
 
 def _validate_barcode(barcode: str) -> None:
     if not BARCODE_RE.match(barcode):
-        raise HTTPException(status_code=400, detail="Invalid barcode format (expected 8-14 digits)")
+        raise HTTPException(status_code=400, detail="Invalid barcode format (digits only)")
+
+
+@router.get("/search", response_model=list[SearchResult])
+async def search_products(q: str = Query(..., min_length=2, description="Product name to search")):
+    """Search products by name in local CSVs. Returns top 10 matches."""
+    results = search_products_by_name(q, limit=10)
+    if not results:
+        raise HTTPException(status_code=404, detail="Aucun produit trouvé pour cette recherche")
+    return results
 
 
 @router.get("/stats", response_model=DashboardStats)
@@ -56,7 +65,7 @@ async def get_product(barcode: str):
 
 @router.get("/analyze/{barcode}", response_model=AnalyzeResponse)
 async def analyze_product(barcode: str):
-    """Fetch product then cross-reference ingredients with TEDX thyroid disruptors."""
+    """Fetch product then cross-reference ingredients with TEDX endocrine disruptors."""
     _validate_barcode(barcode)
     info = await fetch_product_info(barcode)
     matched = match_ingredients(info["ingredients"])

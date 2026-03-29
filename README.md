@@ -1,4 +1,4 @@
-# ThyroGuard 🧪
+# EndoScan 🧪
 
 **Les perturbateurs endocriniens et leur impact sur la santé thyroïdienne**
 
@@ -9,7 +9,7 @@ Application web de data visualisation + scanner de produits pour identifier les 
 ```
 thyroguard/
 ├── frontend/     → React + Vite + Tailwind CSS
-├── backend/      → Python + FastAPI (à venir)
+├── backend/      → Python + FastAPI 
 └── README.md
 ```
 

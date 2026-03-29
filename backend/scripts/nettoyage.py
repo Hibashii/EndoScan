@@ -106,7 +106,7 @@ df_produits_clean = df_produits[['code', 'product_name', 'ingredients_clean']]
 # ==========================================
 print("💾 Sauvegarde des fichiers nettoyés...")
 
-# 🚨 Sauvegarde TEDX en JSON (Format attendu par le Front-End)
+# Sauvegarde TEDX en JSON (Format attendu par le backend)
 df_tedx_clean.to_json('../data/clean/tedx_PROPRE.json', orient='records', force_ascii=False, indent=2)
 
 # Sauvegarde Produits en CSV classique

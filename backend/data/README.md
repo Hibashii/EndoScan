@@ -1,20 +1,33 @@
 # /backend/data/
-#
-# Place cleaned CSV datasets here.
-#
-# Expected files:
-#   tedx_substances.csv — TEDX thyroid-disrupting substances
-#
-# CSV format for tedx_substances.csv:
-#   cas,name,risk,effects
-#   3380-34-5,triclosan,high,"thyroid,reproductive"
-#
-# Columns:
-#   cas      — CAS registry number (string)
-#   name     — substance name or synonym (lowercase preferred)
-#   risk     — risk level: "high", "medium", or "low"
-#   effects  — comma-separated effect categories (inside quotes if multiple)
-#
-# Multiple rows with the same CAS number represent synonyms for one substance.
-# The mock file (tedx_substances.csv) ships with the repo as a working default.
-# When your team provides cleaned data, replace or extend this file.
+
+Place cleaned datasets here in the `clean/` subfolder.
+
+## Expected files in `clean/`:
+
+### `tedx_PROPRE.json` — TEDX endocrine disrupting substances
+```json
+[
+  {
+    "cas": "3380-34-5",
+    "names": ["triclosan", "irgasan"],
+    "risk": "high",
+    "effects": ["thyroid", "estrogenic", "reproductive"]
+  }
+]
+```
+
+### `produits_PROPRES.csv` — Beauty products (Open Beauty Facts)
+```
+code,product_name,ingredients_clean
+3175681851849,Gel Douche Douceur,"aqua,sodium laureth sulfate,..."
+```
+
+### `food_PROPRES.csv` — Food products (Open Food Facts)
+```
+code,product_name,ingredients_clean
+3017620422003,Nutella 400g,"sugar,palm oil,hazelnuts,..."
+```
+
+## Raw data
+Place original unprocessed files in `raw/` (gitignored).
+Run `scripts/nettoyage.py` to regenerate clean files.

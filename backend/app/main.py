@@ -44,4 +44,4 @@ app.include_router(router)
 
 @app.get("/")
 def root():
-    return {"message": "ThyroGuard API is running"}
+    return {"message": "EndoScan API is running"}
