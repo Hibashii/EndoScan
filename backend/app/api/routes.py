@@ -5,7 +5,6 @@ from fastapi import APIRouter, HTTPException, Query
 from app.models.schemas import AnalyzeResponse, ProductResponse, SearchResult
 from app.services.openfacts_service import fetch_product_info, search_products_by_name
 from app.services.tedx_service import match_ingredients
-from app.services import stats_service
 
 router = APIRouter(prefix="/api")
 
@@ -24,35 +23,6 @@ async def search_products(q: str = Query(..., min_length=2, description="Product
     if not results:
         raise HTTPException(status_code=404, detail="Aucun produit trouvé pour cette recherche")
     return results
-
-
-@router.get("/stats", response_model=DashboardStats)
-def get_dashboard_stats():
-    """Return dashboard statistics computed at startup from the clean datasets.
-
-    These numbers reflect the actual contents of:
-      - backend/data/clean/produits_PROPRES.csv  (beauty products)
-      - backend/data/clean/food_PROPRES.csv       (food products)
-      - backend/data/clean/tedx_PROPRE.json       (PE substances)
-
-    Restart the server (or call /api/stats/refresh) to pick up new data files.
-    """
-    return stats_service.get_stats()
-
-
-@router.post("/stats/refresh", response_model=DashboardStats)
-def refresh_stats():
-    """Re-compute dashboard stats from disk without restarting the server.
-
-    Useful after dropping updated CSV/JSON files into backend/data/clean/.
-    """
-    from app.core.config import settings
-    stats_service.init(
-        products_csv=settings.PRODUCTS_CSV_PATH,
-        food_csv=settings.FOOD_CSV_PATH,
-        tedx_json=settings.TEDX_JSON_PATH,
-    )
-    return stats_service.get_stats()
 
 
 @router.get("/product/{barcode}", response_model=ProductResponse)

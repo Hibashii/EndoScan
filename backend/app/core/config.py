@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings
 
-# backend/ directory (two levels up from this file: app/core/config.py → app/ → backend/)
+# backend/ directory (parent of app/)
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 
 
@@ -20,11 +20,6 @@ class Settings(BaseSettings):
     # Path to product CSVs (used for local search fallback)
     PRODUCTS_BEAUTY_CSV: Path = _BACKEND_DIR / "data" / "clean" / "produits_PROPRES.csv"
     PRODUCTS_FOOD_CSV: Path = _BACKEND_DIR / "data" / "clean" / "food_PROPRES.csv"
-
-    # Clean product datasets used for dashboard statistics
-    PRODUCTS_CSV_PATH: Path = _BACKEND_DIR / "data" / "clean" / "produits_PROPRES.csv"
-    FOOD_CSV_PATH:     Path = _BACKEND_DIR / "data" / "clean" / "food_PROPRES.csv"
-    TEDX_JSON_PATH:    Path = _BACKEND_DIR / "data" / "clean" / "tedx_PROPRE.json"
 
     class Config:
         env_file = ".env"
