@@ -168,30 +168,19 @@ async def _search_api(barcode: str) -> dict :
 # ═══════════════════════════════════════════
 # MAIN ENTRY POINT
 # ═══════════════════════════════════════════
-
 async def fetch_product_info(barcode: str) -> dict:
-    """Find a product: local CSVs first (fast), API as fallback (rich data).
+    """Always fetch from live API for accurate ingredient data.
 
     Returns a dict with keys: barcode, name, brand, category, source, ingredients.
-    Raises HTTPException(404) if not found anywhere.
+    Raises HTTPException(404) if not found.
     """
-    # 1. Try local CSVs first (instant, offline)
-    result = _search_local(barcode)
-    if result:
-        logger.info("Product %s found in local CSV (%s)", barcode, result["source"])
-        return result
-
-    # 2. Fall back to live API (has brand, category, full data)
-    logger.info("Product %s not in local CSV, trying live API...", barcode)
     result = await _search_api(barcode)
     if result:
-        logger.info("Product %s found via API (%s)", barcode, result["source"])
         return result
 
-    # 3. Not found anywhere
     raise HTTPException(
         status_code=404,
-        detail="Produit non trouvé (ni en local, ni sur Open Food/Beauty Facts)"
+        detail="Produit non trouvé sur Open Food/Beauty Facts"
     )
 
 

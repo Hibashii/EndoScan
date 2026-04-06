@@ -26,6 +26,22 @@ EFFECT_LABELS = {
     "immune":       "immunitaire",
 }
 
+# ── Generic words that should NEVER be flagged as endocrine disruptors ──
+# These are common food/cosmetic category tags, not chemical substances
+EXCLUDED_INGREDIENTS = {
+    "plant", "fat", "oil", "water", "sugar", "salt", "iron", "zinc",
+    "protein", "flour", "cereal", "animal", "egg", "milk", "cream",
+    "butter", "honey", "cocoa", "coffee", "tea", "fruit", "seed",
+    "leaf", "root", "fiber", "starch", "acid", "alcohol", "wax",
+    "vitamin e", "vitamin a", "vitamin c", "vitamin d", "vitamin b",
+    "manganese", "copper", "calcium", "magnesium", "potassium",
+    "sodium", "phosphorus", "selenium", "chromium", "iodine",
+    "wheat", "rice", "corn", "soy", "meat", "fish", "beef",
+    "chicken", "pork", "vegetable", "mineral", "colour", "color",
+    "flavouring", "flavoring", "fragrance", "parfum", "aroma",
+    "an", "or", "de", "le", "la", "et", "en", "du",
+}
+
 
 def _load_data():
     """Try JSON first, fall back to CSV."""
@@ -33,7 +49,6 @@ def _load_data():
     if json_path.exists():
         return load_substances_from_json(json_path)
 
-    # Fallback: try CSV at same location with .csv extension
     csv_fallback = json_path.with_suffix(".csv")
     if csv_fallback.exists():
         logger.info("JSON not found, falling back to CSV: %s", csv_fallback)
@@ -65,11 +80,8 @@ def get_all_substances() -> list[dict]:
 def match_ingredients(ingredients: list[str]) -> list[dict]:
     """Match a product's ingredients against TEDX substances.
 
-    Returns a list of matched ingredients with:
-      - name: the ingredient name as found in the product
-      - risk: "high" | "medium" | "low"
-      - effects: ["thyroid", "estrogenic", ...] — the health categories
-      - note: human-readable description
+    EXACT MATCH ONLY — no partial matching to avoid false positives
+    like "plant", "fat", "iron" being flagged as endocrine disruptors.
     """
     matched: list[dict] = []
     seen_cas: set[str] = set()
@@ -77,15 +89,16 @@ def match_ingredients(ingredients: list[str]) -> list[dict]:
     for ing in ingredients:
         key = ing.strip().lower()
 
-        # Try exact match first
-        sub = _LOOKUP.get(key)
+        # Skip very short names (too generic to be meaningful)
+        if len(key) < 4:
+            continue
 
-        # Try partial match if exact fails (ingredient may contain extra text)
-        if sub is None:
-            for name, substance in _LOOKUP.items():
-                if name in key or key in name:
-                    sub = substance
-                    break
+        # Skip known generic ingredients that are not chemicals
+        if key in EXCLUDED_INGREDIENTS:
+            continue
+
+        # EXACT match only — no partial matching
+        sub = _LOOKUP.get(key)
 
         if sub is None:
             continue
