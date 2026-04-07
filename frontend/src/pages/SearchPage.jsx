@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { riskColor, riskLabel, vigilanceScore, collectEffects } from "../data/utils";
+import { riskColor, riskLabel, vigilanceScore, collectEffects, computeScore } from "../data/utils";
 import EffectTag from "../components/EffectTag";
 
 const isBarcode = (str) => /^\d+$/.test(str.trim());
@@ -87,6 +87,7 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
 
   const score = vigilanceScore(result);
   const allEffects = result ? collectEffects(result.matched) : [];
+  const productScore = computeScore(result);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 md:py-8 pb-24 md:pb-8">
@@ -174,7 +175,7 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
         </div>
       )}
 
-      {result && result.ingredients.length > 0 && score && (
+      {result && result.ingredients.length > 0 && productScore && (
         <div className="space-y-4 animate-fade-in">
           {lastNameQuery && (
             <button onClick={() => searchByName(lastNameQuery)}
@@ -195,17 +196,28 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
                   {result.source === "food" ? "🍽 Alimentaire" : "💄 Cosmétique"}
                 </span>
               </div>
-              <div className={`text-center px-4 py-3 rounded-2xl shrink-0
-                ${score.color === "red" ? "bg-red-50" : score.color === "amber" ? "bg-amber-50" : "bg-emerald-50"}`}>
-                <p className={`text-2xl font-bold
-                  ${score.color === "red" ? "text-red-600" : score.color === "amber" ? "text-amber-600" : "text-emerald-600"}`}>
-                  {result.matched.length}/{result.ingredients.length}
-                </p>
-                <p className="text-[10px] text-slate-500 mt-0.5">à risque</p>
-                <span className={`inline-block mt-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-lg text-white
-                  ${score.color === "red" ? "bg-red-500" : score.color === "amber" ? "bg-amber-500" : "bg-emerald-500"}`}>
-                  {score.label}
+              <div className="flex flex-col items-center shrink-0">
+                <div className={`w-20 h-20 rounded-full flex items-center justify-center border-4
+                  ${productScore.color === "emerald" ? "border-emerald-400 bg-emerald-50" :
+                    productScore.color === "amber" ? "border-amber-400 bg-amber-50" :
+                    productScore.color === "orange" ? "border-orange-400 bg-orange-50" :
+                    "border-red-400 bg-red-50"}`}>
+                  <span className={`text-xl font-bold
+                    ${productScore.color === "emerald" ? "text-emerald-600" :
+                      productScore.color === "amber" ? "text-amber-600" :
+                      productScore.color === "orange" ? "text-orange-600" :
+                      "text-red-600"}`}>
+                    {productScore.score}<span className="text-xs font-medium text-slate-400">/100</span>
+                  </span>
+                </div>
+                <span className={`mt-2 text-[11px] font-semibold px-3 py-1 rounded-full text-white
+                  ${productScore.color === "emerald" ? "bg-emerald-500" :
+                    productScore.color === "amber" ? "bg-amber-500" :
+                    productScore.color === "orange" ? "bg-orange-500" :
+                    "bg-red-500"}`}>
+                  {productScore.label}
                 </span>
+                <p className="text-[10px] text-slate-400 mt-1">{result.matched.length} PE / {result.ingredients.length}</p>
               </div>
             </div>
 

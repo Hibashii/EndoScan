@@ -48,3 +48,26 @@ export const collectEffects = (matched) => {
   const all = matched.flatMap(m => m.effects || []);
   return [...new Set(all)];
 };
+
+// ── Yuka-style score (0-100, higher = safer) ──
+export const computeScore = (product) => {
+  if (!product || !product.matched) return null;
+  if (product.ingredients.length === 0) return null;
+
+  let penalty = 0;
+  for (const m of product.matched) {
+    if (m.risk === "high") penalty += 30;
+    else if (m.risk === "medium") penalty += 15;
+    else penalty += 5;
+  }
+
+  const score = Math.max(0, 100 - penalty);
+
+  let label, color;
+  if (score >= 75) { label = "Bon"; color = "emerald"; }
+  else if (score >= 50) { label = "Modéré"; color = "amber"; }
+  else if (score >= 25) { label = "Médiocre"; color = "orange"; }
+  else { label = "Mauvais"; color = "red"; }
+
+  return { score, label, color };
+};
