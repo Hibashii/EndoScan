@@ -6,11 +6,12 @@ const isBarcode = (str) => /^\d+$/.test(str.trim());
 
 export default function SearchPage({ initialCode, clearInitialCode }) {
   const [query, setQuery] = useState("");
-  const [result, setResult] = useState(null);        // single product analysis
-  const [searchResults, setSearchResults] = useState(null); // name search results
+  const [result, setResult] = useState(null);
+  const [searchResults, setSearchResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState(null);
+  const [lastNameQuery, setLastNameQuery] = useState(null);
 
   const resetState = () => {
     setResult(null);
@@ -19,7 +20,6 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
     setError(null);
   };
 
-  // Analyze a product by barcode
   const analyzeBarcode = async (code) => {
     setLoading(true);
     resetState();
@@ -40,10 +40,10 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
     }
   };
 
-  // Search products by name
   const searchByName = async (name) => {
     setLoading(true);
     resetState();
+    setLastNameQuery(name);
 
     try {
       const resp = await fetch(`/api/search?q=${encodeURIComponent(name)}`);
@@ -61,7 +61,6 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
     }
   };
 
-  // Main search handler — auto-detects barcode vs name
   const handleSearch = (override) => {
     const q = (override || query).trim();
     if (!q) return;
@@ -74,14 +73,11 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
     }
   };
 
-  // Pick a product from search results → analyze it
   const pickProduct = (barcode) => {
-    setQuery(barcode);
     setSearchResults(null);
     analyzeBarcode(barcode);
   };
 
-  // Auto-search when coming from scanner
   useEffect(() => {
     if (initialCode) {
       handleSearch(initialCode);
@@ -99,7 +95,6 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
         Entrez un code-barres ou un nom de produit
       </p>
 
-      {/* Search bar */}
       <div className="flex gap-2 mb-4">
         <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -111,14 +106,12 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
         </button>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="bg-red-50 rounded-2xl p-5 text-center mb-4">
           <p className="text-red-600 text-sm font-medium">{error}</p>
         </div>
       )}
 
-      {/* Loading */}
       {loading && (
         <div className="flex items-center justify-center py-12">
           <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
@@ -126,7 +119,6 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
         </div>
       )}
 
-      {/* Not found */}
       {notFound && (
         <div className="bg-slate-50 rounded-2xl p-8 text-center">
           <p className="text-slate-400 text-lg mb-1">Aucun produit trouvé</p>
@@ -134,7 +126,6 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
         </div>
       )}
 
-      {/* Name search results — clickable cards */}
       {searchResults && searchResults.length > 0 && (
         <div className="space-y-2 animate-fade-in">
           <p className="text-xs text-slate-400 mb-2">{searchResults.length} résultat{searchResults.length > 1 ? "s" : ""} — cliquez pour analyser</p>
@@ -158,18 +149,40 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
         </div>
       )}
 
-      {/* Single product analysis result */}
-      {result && score && (
+      {result && result.ingredients.length === 0 && (
         <div className="space-y-4 animate-fade-in">
-          {/* Back to results button (if came from name search) */}
-          {!isBarcode(query) && (
-            <button onClick={() => searchByName(query)}
+          {lastNameQuery && (
+            <button onClick={() => searchByName(lastNameQuery)}
               className="text-xs text-indigo-600 hover:text-indigo-800 cursor-pointer">
-              ← Retour aux résultats
+              ← Retour aux résultats pour "{lastNameQuery}"
+            </button>
+          )}
+          <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
+            <p className="text-lg font-bold text-slate-900">{result.name}</p>
+            <p className="text-sm text-slate-500">
+              {[result.brand, result.category].filter(v => v && v !== "Inconnu" && v !== "Marque inconnue").join(" · ") || null}
+            </p>
+            <span className={`inline-block mt-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full
+              ${result.source === "food" ? "bg-amber-50 text-amber-700" : "bg-purple-50 text-purple-700"}`}>
+              {result.source === "food" ? "🍽 Alimentaire" : "💄 Cosmétique"}
+            </span>
+          </div>
+          <div className="bg-amber-50 rounded-2xl p-6 text-center">
+            <p className="text-amber-700 text-sm font-medium mb-1">⚠️ Ingrédients non disponibles</p>
+            <p className="text-amber-600 text-xs">Ce produit existe dans la base mais sa liste d'ingrédients n'a pas encore été renseignée.</p>
+          </div>
+        </div>
+      )}
+
+      {result && result.ingredients.length > 0 && score && (
+        <div className="space-y-4 animate-fade-in">
+          {lastNameQuery && (
+            <button onClick={() => searchByName(lastNameQuery)}
+              className="text-xs text-indigo-600 hover:text-indigo-800 cursor-pointer">
+              ← Retour aux résultats pour "{lastNameQuery}"
             </button>
           )}
 
-          {/* Product header */}
           <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -196,7 +209,6 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
               </div>
             </div>
 
-            {/* Effect summary tags */}
             {allEffects.length > 0 && (
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-2">Effets endocriniens détectés</p>
@@ -209,7 +221,6 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
             )}
           </div>
 
-          {/* Ingredients list */}
           <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
             <h3 className="text-sm font-semibold text-slate-900 mb-3">
               Ingrédients analysés ({result.ingredients.length})

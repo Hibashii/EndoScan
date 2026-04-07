@@ -124,17 +124,34 @@ async def _fetch_product_api(url: str, barcode: str) -> dict:
 
 
 def _parse_ingredients_api(product: dict) -> list[str]:
-    """Extract a flat list of ingredient names from an OFF API response."""
-    # Method 1: structured ingredients list (best quality)
+    """Extract ingredient names from an OFF API response.
+    
+    Uses the 'id' field (normalized English name) when available,
+    falls back to 'text' field (local language).
+    """
     ingredients_list = product.get("ingredients", [])
     if ingredients_list:
-        return [ing.get("text", ing.get("id", "")).strip()
-                for ing in ingredients_list if ing.get("text") or ing.get("id")]
+        names = []
+        for ing in ingredients_list:
+            # Prefer 'id' — it's the normalized English name (e.g. "en:methylparaben")
+            ing_id = ing.get("id", "")
+            if ing_id:
+                # Remove language prefix like "en:", "fr:"
+                clean = ing_id.split(":")[-1].replace("-", " ").strip()
+                if clean:
+                    names.append(clean)
+                    continue
+            # Fallback to 'text' (local language)
+            text = ing.get("text", "").strip()
+            if text:
+                names.append(text)
+        return names
 
-    # Method 2: comma-split the ingredients_text field
-    text = product.get("ingredients_text", "") or ""
-    if text:
-        return [i.strip() for i in text.split(",") if i.strip()]
+    # Last resort: try ingredients_text in English first, then any language
+    for key in ["ingredients_text_en", "ingredients_text", "ingredients_text_fr"]:
+        text = product.get(key, "") or ""
+        if text:
+            return [i.strip() for i in text.split(",") if i.strip()]
 
     return []
 
