@@ -1,196 +1,250 @@
+"""
+compute_stats.py — version vectorisée avec liste de blocage nutriments
+Corrections :
+  - NUTRIENT_BLOCKLIST étendue avec les faux positifs naturels.
+  - Option A : pct des Top Substances calculé sur les produits contaminés.
+  - Filtre sur la longueur des mots (> 3) et nettoyage des tirets.
+"""
 import pandas as pd
 import json
-import os
-from collections import Counter
+import re
+from pathlib import Path
 
-print("⏳ 1. Chargement des données propres...")
+BASE          = Path(__file__).parent
+chemin_tedx   = BASE / '../data/clean/tedx_PROPRE.json'
+chemin_beauty = BASE / '../data/clean/produits_PROPRES.csv'
+chemin_food   = BASE / '../data/clean/food_PROPRES.csv'
+chemin_sortie = BASE / '../../frontend/src/data/realData.js'
 
-# Chemins (en partant du dossier scripts/)
-chemin_tedx = '../data/clean/tedx_PROPRE.json'
-chemin_beauty = '../data/clean/produits_PROPRES.csv'
-chemin_food = '../data/clean/food_PROPRES.csv'
-chemin_sortie_js = '../../frontend/src/data/realData.js'
+# ── BLOCKLIST ─────────────────────────────────────────────────────────────────
+NUTRIENT_BLOCKLIST = {
+    # Minéraux essentiels
+    "iron", "zinc", "copper", "manganese", "selenium", "chromium",
+    "molybdenum", "iodine", "calcium", "magnesium", "potassium",
+    "phosphorus", "sodium", "fluoride",
+    # Sels de minéraux courants (supplémentation)
+    "zinc oxide", "zinc sulfate", "ferrous sulfate", "ferrous fumarate",
+    "ferric pyrophosphate", "sodium selenite", "sodium molybdate",
+    "potassium iodide", "calcium carbonate", "magnesium oxide",
+    "cupric sulfate", "manganese sulfate", "chromium chloride",
+    # Vitamines
+    "vitamin a", "vitamin b", "vitamin c", "vitamin d", "vitamin e",
+    "vitamin k", "vitamin b1", "vitamin b2", "vitamin b3", "vitamin b5",
+    "vitamin b6", "vitamin b7", "vitamin b9", "vitamin b12",
+    "thiamin", "thiamine", "riboflavin", "niacin", "niacinamide",
+    "pantothenic acid", "pyridoxine", "biotin", "folate", "folic acid",
+    "cobalamin", "retinol", "cholecalciferol", "tocopherol",
+    "alpha-tocopherol", "ascorbic acid",
+    # Pigments / colorants source de faux positifs
+    "chinese white",   # ZnO dans peintures — pas un PE alimentaire
+    "aurin",           # colorant — génère faux positifs via "laurin-" etc.
+    # Macronutriments génériques
+    "protein", "carbohydrate", "fat", "fiber", "sugar", "salt",
+    "water", "energy",
+    # --- FAUX POSITIFS NATURELS ET ALLERGÈNES À IGNORER ---
+    "lemon balm", "quercetin", "sodium fluoride", "sodium selenate",
+    "sodium bicarbonate", "zinc chloride", "magnesium chloride", 
+    "monosodium glutamate", "benzyl salicylate", "isoeugenol", "methyl salicylate"
+}
 
-# Chargement de TEDX
-with open(chemin_tedx, 'r', encoding='utf-8') as f:
+# ── 1. Chargement TEDX ───────────────────────────────────────────────────────
+print("⏳ Chargement TEDX...")
+with open(chemin_tedx, encoding='utf-8') as f:
     tedx_data = json.load(f)
 
-# Création d'un dictionnaire enrichi (avec les risques et les effets)
-pe_dict = {}
+pe_lookup = {}
 for item in tedx_data:
-    risk = item.get('risk', 'medium')
+    canon   = item['names'][0]
+    risk    = item.get('risk', 'medium')
     effects = item.get('effects', [])
     for name in item['names']:
-        pe_dict[name.lower()] = {'risk': risk, 'effects': effects}
+        key = name.lower().strip()
+        if key in NUTRIENT_BLOCKLIST:
+            continue                        # ← exclure les nutriments
+        pe_lookup[key] = {'risk': risk, 'effects': effects, 'canonical': canon}
 
-# Stats TEDX globales
 total_substances_tedx = len(tedx_data)
-total_with_effects = sum(1 for item in tedx_data if len(item.get('effects', [])) > 0)
+print(f"   {total_substances_tedx} substances TEDX — {len(pe_lookup)} synonymes actifs (nutriments exclus)")
 
-# Chargement des CSV
-print("   -> Lecture des cosmétiques...")
-df_beauty = pd.read_csv(chemin_beauty)
-print("   -> Lecture de l'alimentaire...")
-df_food = pd.read_csv(chemin_food)
+# ── 2. Chargement CSV ────────────────────────────────────────────────────────
+print("⏳ Chargement CSV produits...")
+COLS = ['code', 'product_name', 'ingredients_clean']
+df_beauty = pd.read_csv(chemin_beauty, header=None, names=COLS, dtype=str, on_bad_lines='skip')
+df_food   = pd.read_csv(chemin_food,   header=None, names=COLS, dtype=str, on_bad_lines='skip')
 
-total_beauty = len(df_beauty)
-total_food = len(df_food)
-total_products = total_beauty + total_food
+df_beauty['source'] = 'beauty'
+df_food['source']   = 'food'
+df = pd.concat([df_beauty, df_food], ignore_index=True)
 
-print(f"📊 Total analysé : {total_products} produits.")
-print("🔍 Recherche avancée (Catégories et Effets)...")
+df['ingredients_clean'] = df['ingredients_clean'].fillna('')
+df['product_name']      = df['product_name'].fillna('')
 
-# Compteurs globaux
-produits_avec_pe = 0
-beauty_avec_pe = 0
-food_avec_pe = 0
+total_products = len(df)
+total_beauty   = len(df_beauty)
+total_food     = len(df_food)
+print(f"   {total_products:,} produits ({total_beauty:,} cosmétiques + {total_food:,} alimentaires)")
 
-compteur_pe_specifiques = Counter()
-compteur_effets = Counter()
+# ── 3. Tokenisation vectorisée ───────────────────────────────────────────────
+print("⏳ Tokenisation (peut prendre ~20s)...")
+tokens_exploded = (
+    df['ingredients_clean']
+    .str.lower()
+    .str.split(r'[,;|/]', regex=True)
+    .explode()
+    .str.replace(r'^[a-z]{2}:', '', regex=True)   # retirer fr: en: xx:
+    .str.replace('-', ' ', regex=False)           # Nettoyage des tirets
+    .str.strip()
+)
 
-# --- L'ASTUCE DATA SCIENCE : Classification par mots-clés ---
-mots_cles_categories = {
-    "Soins visage": ["crème", "creme", "visage", "serum", "lotion", "face", "anti-âge", "hydratant"],
-    "Gel douche": ["douche", "shower", "bain", "bath", "savon", "lavant"],
-    "Dentifrice": ["dentifrice", "tooth", "mouth", "dent"],
-    "Shampoing": ["shampoing", "shampoo", "cheveux", "hair", "après-shampoing"],
-    "Snacks": ["chocolat", "biscuit", "snack", "barre", "chips", "bonbon", "gâteau"],
-    "Boissons": ["boisson", "eau", "jus", "drink", "water", "soda", "cola", "thé", "café"],
-    "Conserves": ["conserve", "boite", "canned", "sauce", "soupe", "tomate"]
-}
+# Filtre : ignorer les mots de 3 lettres ou moins (ex: "an", "tin")
+tokens_exploded = tokens_exploded[tokens_exploded.str.len() > 3]
 
-compteur_cat_total = Counter()
-compteur_cat_pe = Counter()
+print(f"   {len(tokens_exploded):,} tokens extraits")
 
-tous_les_noms_pe = list(pe_dict.keys())
+# ── 4. Matching exact token ↔ lookup PE ──────────────────────────────────────
+print("⏳ Matching exact token ↔ PE (pas de substring)...")
+pe_set = set(pe_lookup.keys())
+matched_tokens = tokens_exploded[tokens_exploded.isin(pe_set)]
+print(f"   {len(matched_tokens):,} occurrences de PE trouvées")
 
-def analyser_ingredients(df, type_prod):
-    global produits_avec_pe, beauty_avec_pe, food_avec_pe
-    for _, row in df.iterrows():
-        ingredients = str(row.get('ingredients_clean', '')).lower()
-        nom_produit = str(row.get('product_name', '')).lower()
-        
-        if ingredients == 'nan' or not ingredients:
-            continue
-            
-        # 1. Deviner la catégorie du produit
-        cat_trouvee = None
-        for cat, mots in mots_cles_categories.items():
-            if any(mot in nom_produit for mot in mots):
-                cat_trouvee = cat
-                break
-        
-        if cat_trouvee:
-            compteur_cat_total[cat_trouvee] += 1
+# ── 5. Stats par produit ─────────────────────────────────────────────────────
+print("⏳ Calcul des statistiques...")
+matched_df = matched_tokens.reset_index()
+matched_df.columns = ['prod_idx', 'pe_token']
 
-        # 2. Chercher les PE
-        pe_trouves = []
-        for pe in tous_les_noms_pe:
-            # On ignore les mots de moins de 4 lettres pour éviter les faux positifs ("an", "iron")
-            if len(pe) > 3 and pe in ingredients:
-                pe_trouves.append(pe)
-                compteur_pe_specifiques[pe] += 1
-                
-        if len(pe_trouves) > 0:
-            produits_avec_pe += 1
-            if type_prod == 'beauty': beauty_avec_pe += 1
-            else: food_avec_pe += 1
-                
-            if cat_trouvee:
-                compteur_cat_pe[cat_trouvee] += 1
-                
-            # 3. Compter les effets sur la santé pour ce produit
-            effets_du_produit = set()
-            for pe in pe_trouves:
-                for effet in pe_dict[pe]['effects']:
-                    effets_du_produit.add(effet)
-            
-            for effet in effets_du_produit:
-                compteur_effets[effet] += 1
+matched_df['canonical'] = matched_df['pe_token'].map(lambda t: pe_lookup[t]['canonical'])
+matched_df['risk']      = matched_df['pe_token'].map(lambda t: pe_lookup[t]['risk'])
+matched_df['effects']   = matched_df['pe_token'].map(lambda t: pe_lookup[t]['effects'])
 
-# Lancement des moteurs
-analyser_ingredients(df_beauty, 'beauty')
-analyser_ingredients(df_food, 'food')
+# Dédupliquer : 1 substance par produit max
+matched_df = matched_df.drop_duplicates(subset=['prod_idx', 'canonical'])
 
-# ==========================================
-# CALCUL DES STATISTIQUES FINALES
-# ==========================================
-percent_pe = round((produits_avec_pe / total_products) * 100) if total_products > 0 else 0
+idx_with_pe      = set(matched_df['prod_idx'].unique())
+produits_avec_pe = len(idx_with_pe)
 
-# 1. Top Substances (Calculé sur les produits contaminés pour des % lisibles)
+src_series     = df.loc[list(idx_with_pe), 'source']
+beauty_avec_pe = int((src_series == 'beauty').sum())
+food_avec_pe   = int((src_series == 'food').sum())
+percent_pe     = round(produits_avec_pe / total_products * 100, 1)
+
+print(f"\n📊 Résultats :")
+print(f"   Total produits      : {total_products:,}")
+print(f"   Avec PE             : {produits_avec_pe:,} ({percent_pe}%)")
+print(f"   Cosméto avec PE     : {beauty_avec_pe:,} / {total_beauty:,} "
+      f"({round(beauty_avec_pe/total_beauty*100) if total_beauty else 0}%)")
+print(f"   Alim avec PE        : {food_avec_pe:,} / {total_food:,} "
+      f"({round(food_avec_pe/total_food*100) if total_food else 0}%)")
+
+# ── Top substances ────────────────────────────────────────────────────────────
+pe_counts = matched_df.groupby('canonical')['prod_idx'].nunique().sort_values(ascending=False)
 top_substances = []
-for name, count in compteur_pe_specifiques.most_common(8):
-    pct = round((count / produits_avec_pe) * 100) if produits_avec_pe > 0 else 0
-    risk = pe_dict[name]['risk']
-    top_substances.append({"name": name.capitalize(), "pct": pct, "risk": risk})
 
-# 2. Répartition par Effet
-labels_effets = {
-    "estrogenic": "Estrogénique", "androgenic": "Androgénique",
-    "thyroid": "Thyroïde", "reproductive": "Reproductif",
-    "cancer": "Cancer", "neurological": "Neurologique",
-    "immune": "Immunitaire"
+for canon, count in pe_counts.head(8).items():
+    # OPTION A : Pourcentage calculé sur les produits contaminés
+    pct  = round((count / produits_avec_pe) * 100, 1) if produits_avec_pe > 0 else 0
+    info = pe_lookup.get(canon.lower(), {})
+    top_substances.append({"name": canon.capitalize(), "pct": pct, "risk": info.get('risk', 'medium')})
+
+print(f"\n   Top substances (% sur {produits_avec_pe:,} produits avec PE) :")
+for s in top_substances:
+    print(f"     {s['name']:40s} {s['pct']:5.1f}%  [{s['risk']}]")
+
+# ── Effets ────────────────────────────────────────────────────────────────────
+effects_exploded = (
+    matched_df[['prod_idx', 'effects']]
+    .explode('effects')
+    .dropna(subset=['effects'])
+    .query("effects != ''")
+    .drop_duplicates()
+)
+effect_counts = effects_exploded.groupby('effects')['prod_idx'].nunique()
+
+EFFECT_LABELS = {
+    "estrogenic":   "Estrogénique",
+    "androgenic":   "Androgénique",
+    "thyroid":      "Thyroïde",
+    "reproductive": "Reproductif",
+    "cancer":       "Cancer",
+    "neurological": "Neurologique",
+    "immune":       "Immunitaire",
 }
-by_effect = []
-for effect, count in compteur_effets.items():
-    if effect in labels_effets:
-        pct = round((count / produits_avec_pe) * 100) if produits_avec_pe > 0 else 0
-        by_effect.append({
-            "effect": effect,
-            "label": labels_effets[effect],
-            "count": count,
-            "pct": pct
-        })
-by_effect.sort(key=lambda x: x['count'], reverse=True)
 
-# 3. Répartition par Catégorie
+by_effect = sorted(
+    [
+        {"effect": e, "label": EFFECT_LABELS[e], "count": int(c),
+         "pct": round((c / produits_avec_pe) * 100, 1) if produits_avec_pe > 0 else 0} # Option A appliquée ici aussi !
+        for e, c in effect_counts.items() if e in EFFECT_LABELS
+    ],
+    key=lambda x: -x['count'],
+)
+
+# ── Catégories ────────────────────────────────────────────────────────────────
+CATEGORIES = [
+    ("Cosmétiques (maquillage)", ["mascara","lipstick","fond de teint","foundation",
+                                   "blush","concealer","eyeshadow","kajal","eyeliner","vernis"]),
+    ("Soins visage",             ["crème visage","sérum","serum","lotion visage","face cream",
+                                   "day cream","night cream","moistur","anti-âge","anti-age",
+                                   "masque visage","face mask"]),
+    ("Dentifrice",               ["dentifrice","toothpaste","tooth paste",
+                                   "bain de bouche","mouthwash"]),
+    ("Shampoing",                ["shampoo","shampoing","après-shampoing","conditioner",
+                                   "masque cheveux","hair mask"]),
+    ("Gel douche",               ["gel douche","shower gel","body wash","savon douche","bain douche"]),
+    ("Produits laitiers",        ["yaourt","yogurt","fromage","cheese","beurre","butter",
+                                   "crème fraîche","kefir"]),
+    ("Boissons",                 ["jus de","juice","boisson","soda","limonade",
+                                   "smoothie","sirop","nectar","cola"]),
+    ("Snacks",                   ["chocolat","biscuit","chips","snack","bonbon",
+                                   "gâteau","cookie","popcorn"]),
+    ("Conserves / sauces",       ["conserve","sauce tomate","soupe","ketchup",
+                                   "vinaigrette","mayonnaise"]),
+]
+
+names_lower = df['product_name'].str.lower()
 by_category = []
-for cat in mots_cles_categories.keys():
-    total = compteur_cat_total[cat]
-    pe_count = compteur_cat_pe[cat]
-    pct = round((pe_count / total) * 100) if total > 0 else 0
-    if pct > 0:
-        by_category.append({"cat": cat, "pct": pct})
-by_category.sort(key=lambda x: x['pct'], reverse=True)
+for cat_name, kws in CATEGORIES:
+    mask      = names_lower.str.contains('|'.join(re.escape(k) for k in kws), regex=True, na=False)
+    total_cat = int(mask.sum())
+    if total_cat < 10:
+        continue
+    pe_in_cat = len(idx_with_pe & set(df.index[mask]))
+    by_category.append({"cat": cat_name, "pct": round((pe_in_cat / total_cat) * 100) if total_cat > 0 else 0, "total": total_cat})
 
-# 4. Food vs Cosmétiques (Taux de contamination dans chaque secteur)
-cosm_pct = round((beauty_avec_pe / total_beauty) * 100) if total_beauty > 0 else 0
-food_pct = round((food_avec_pe / total_food) * 100) if total_food > 0 else 0
+by_category.sort(key=lambda x: -x['pct'])
 
-print("✅ Analyse terminée ! Création du fichier realData.js...")
+cosm_pct = round((beauty_avec_pe / total_beauty) * 100) if total_beauty else 0
+food_pct = round((food_avec_pe   / total_food)   * 100) if total_food   else 0
 
-# ==========================================
-# GÉNÉRATION DU FICHIER JS
-# ==========================================
-js_content = f"""// ============================================
-// Effect categories — the health impacts we track
-// ============================================
-export const EFFECT_CATEGORIES = {{
-  thyroid:       {{ label: "Thyroïde",       emoji: "🦋", color: "violet" }},
-  estrogenic:    {{ label: "Estrogénique",   emoji: "♀️", color: "pink" }},
-  androgenic:    {{ label: "Androgénique",   emoji: "♂️", color: "blue" }},
-  reproductive:  {{ label: "Reproductif",    emoji: "🧬", color: "rose" }},
-  cancer:        {{ label: "Cancer",         emoji: "⚠️", color: "red" }},
-  neurological:  {{ label: "Neurologique",   emoji: "🧠", color: "amber" }},
-  immune:        {{ label: "Immunitaire",    emoji: "🛡️", color: "emerald" }},
-}};
+# ── Génération realData.js ────────────────────────────────────────────────────
+print("\n✅ Génération de realData.js...")
+js_lines = [
+    "// Généré automatiquement par compute_stats.py — ne pas modifier.\n",
+    "\n",
+    "export const EFFECT_CATEGORIES = {\n",
+    '  thyroid:      { label: "Thyroïde",      emoji: "🦋", color: "violet"  },\n',
+    '  estrogenic:   { label: "Estrogénique",  emoji: "♀️", color: "pink"    },\n',
+    '  androgenic:   { label: "Androgénique",  emoji: "♂️", color: "blue"    },\n',
+    '  reproductive: { label: "Reproductif",   emoji: "🧬", color: "rose"    },\n',
+    '  cancer:       { label: "Cancer",        emoji: "⚠️", color: "red"     },\n',
+    '  neurological: { label: "Neurologique",  emoji: "🧠", color: "amber"   },\n',
+    '  immune:       { label: "Immunitaire",   emoji: "🛡️", color: "emerald" },\n',
+    "};\n",
+    "\n",
+    "export const DASHBOARD_STATS = {\n",
+    f"  totalProducts:       {total_products},\n",
+    f"  totalBeauty:         {total_beauty},\n",
+    f"  totalFood:           {total_food},\n",
+    f"  percentWithPE:       {percent_pe},\n",
+    f"  totalSubstancesTEDX: {total_substances_tedx},\n",
+    f"  topSubstances:       {json.dumps(top_substances, ensure_ascii=False, indent=4)},\n",
+    f"  byEffect:            {json.dumps(by_effect, ensure_ascii=False, indent=4)},\n",
+    f"  byCategory:          {json.dumps(by_category, ensure_ascii=False, indent=4)},\n",
+    f'  cosmVsFood:          {{ "cosm": {cosm_pct}, "food": {food_pct} }},\n',
+    "};\n",
+]
 
-// ============================================
-// Dashboard Stats (Calculated from REAL Open Food/Beauty Facts data)
-// ============================================
-export const DASHBOARD_STATS = {{
-  totalProducts: {total_products},
-  percentWithPE: {percent_pe},
-  totalSubstancesTEDX: {total_substances_tedx},
-  totalWithEffects: {total_with_effects},
-  topSubstances: {json.dumps(top_substances, indent=4)},
-  byEffect: {json.dumps(by_effect, indent=4)},
-  byCategory: {json.dumps(by_category, indent=4)},
-  cosmVsFood: {{ "cosm": {cosm_pct}, "food": {food_pct} }}
-}};
-"""
+chemin_sortie.parent.mkdir(parents=True, exist_ok=True)
+with open(chemin_sortie, 'w', encoding='utf-8') as f:
+    f.writelines(js_lines)
 
-with open(chemin_sortie_js, 'w', encoding='utf-8') as f:
-    f.write(js_content)
-
-print(f"🎉 MAGNIFIQUE ! Le fichier a été mis à jour avec tes vraies données et la nouvelle structure !")
+print(f"🎉 Fichier écrit avec succès : {chemin_sortie}")
