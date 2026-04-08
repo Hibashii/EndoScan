@@ -97,12 +97,18 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
       </p>
 
       <div className="flex gap-2 mb-4">
-        <input type="text" value={query} onChange={(e) => setQuery(e.target.value)}
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
           placeholder="Code-barres ou nom de produit (ex: Nutella, 3017620422003)"
-          className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white" />
-        <button onClick={() => handleSearch()}
-          className="px-5 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors active:scale-95 cursor-pointer">
+          className="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+        />
+        <button
+          onClick={() => handleSearch()}
+          className="px-5 py-3 bg-indigo-600 text-white rounded-xl text-sm font-medium hover:bg-indigo-700 transition-colors active:scale-95 cursor-pointer"
+        >
           Analyser
         </button>
       </div>
@@ -129,20 +135,31 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
 
       {searchResults && searchResults.length > 0 && (
         <div className="space-y-2 animate-fade-in">
-          <p className="text-xs text-slate-400 mb-2">{searchResults.length} résultat{searchResults.length > 1 ? "s" : ""} — cliquez pour analyser</p>
+          <p className="text-xs text-slate-400 mb-2">
+            {searchResults.length} résultat{searchResults.length > 1 ? "s" : ""} — cliquez pour analyser
+          </p>
           {searchResults.map((p, i) => (
-            <button key={p.barcode + i} onClick={() => pickProduct(p.barcode)}
-              className="w-full bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-4 hover:border-indigo-200 hover:shadow-sm transition-all text-left cursor-pointer group">
+            <button
+              key={p.barcode + i}
+              onClick={() => pickProduct(p.barcode)}
+              className="w-full bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-4 hover:border-indigo-200 hover:shadow-sm transition-all text-left cursor-pointer group"
+            >
               <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-50 to-violet-50 flex items-center justify-center shrink-0 group-hover:from-indigo-100 group-hover:to-violet-100 transition-colors">
                 <span className="text-sm">{p.source === "food" ? "🍽" : "💄"}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-900 truncate">{p.name}</p>
                 <p className="text-[11px] text-slate-400">
-                  Code {p.barcode} · {p.ingredient_count} ingrédient{p.ingredient_count > 1 ? "s" : ""} · {p.source === "food" ? "Alimentaire" : "Cosmétique"}
+                  Code {p.barcode} · {p.ingredient_count} ingrédient{p.ingredient_count > 1 ? "s" : ""} ·{" "}
+                  {p.source === "food" ? "Alimentaire" : "Cosmétique"}
                 </p>
               </div>
-              <svg className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -153,24 +170,32 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
       {result && result.ingredients.length === 0 && (
         <div className="space-y-4 animate-fade-in">
           {lastNameQuery && (
-            <button onClick={() => searchByName(lastNameQuery)}
-              className="text-xs text-indigo-600 hover:text-indigo-800 cursor-pointer">
+            <button
+              onClick={() => searchByName(lastNameQuery)}
+              className="text-xs text-indigo-600 hover:text-indigo-800 cursor-pointer"
+            >
               ← Retour aux résultats pour "{lastNameQuery}"
             </button>
           )}
           <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm">
             <p className="text-lg font-bold text-slate-900">{result.name}</p>
             <p className="text-sm text-slate-500">
-              {[result.brand, result.category].filter(v => v && v !== "Inconnu" && v !== "Marque inconnue").join(" · ") || null}
+              {[result.brand, result.category]
+                .filter((v) => v && v !== "Inconnu" && v !== "Marque inconnue")
+                .join(" · ") || null}
             </p>
-            <span className={`inline-block mt-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full
-              ${result.source === "food" ? "bg-amber-50 text-amber-700" : "bg-purple-50 text-purple-700"}`}>
+            <span
+              className={`inline-block mt-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full
+              ${result.source === "food" ? "bg-amber-50 text-amber-700" : "bg-purple-50 text-purple-700"}`}
+            >
               {result.source === "food" ? "🍽 Alimentaire" : "💄 Cosmétique"}
             </span>
           </div>
           <div className="bg-amber-50 rounded-2xl p-6 text-center">
             <p className="text-amber-700 text-sm font-medium mb-1">⚠️ Ingrédients non disponibles</p>
-            <p className="text-amber-600 text-xs">Ce produit existe dans la base mais sa liste d'ingrédients n'a pas encore été renseignée.</p>
+            <p className="text-amber-600 text-xs">
+              Ce produit existe dans la base mais sa liste d'ingrédients n'a pas encore été renseignée.
+            </p>
           </div>
         </div>
       )}
@@ -178,8 +203,10 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
       {result && result.ingredients.length > 0 && productScore && (
         <div className="space-y-4 animate-fade-in">
           {lastNameQuery && (
-            <button onClick={() => searchByName(lastNameQuery)}
-              className="text-xs text-indigo-600 hover:text-indigo-800 cursor-pointer">
+            <button
+              onClick={() => searchByName(lastNameQuery)}
+              className="text-xs text-indigo-600 hover:text-indigo-800 cursor-pointer"
+            >
               ← Retour aux résultats pour "{lastNameQuery}"
             </button>
           )}
@@ -189,43 +216,74 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
               <div>
                 <p className="text-lg font-bold text-slate-900">{result.name}</p>
                 <p className="text-sm text-slate-500">
-                  {[result.brand, result.category].filter(v => v && v !== "Inconnu" && v !== "Marque inconnue").join(" · ") || null}
+                  {[result.brand, result.category]
+                    .filter((v) => v && v !== "Inconnu" && v !== "Marque inconnue")
+                    .join(" · ") || null}
                 </p>
-                <span className={`inline-block mt-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full
-                  ${result.source === "food" ? "bg-amber-50 text-amber-700" : "bg-purple-50 text-purple-700"}`}>
+                <span
+                  className={`inline-block mt-2 text-[10px] font-medium px-2.5 py-0.5 rounded-full
+                  ${result.source === "food" ? "bg-amber-50 text-amber-700" : "bg-purple-50 text-purple-700"}`}
+                >
                   {result.source === "food" ? "🍽 Alimentaire" : "💄 Cosmétique"}
                 </span>
               </div>
               <div className="flex flex-col items-center shrink-0">
-                <div className={`w-20 h-20 rounded-full flex items-center justify-center border-4
-                  ${productScore.color === "emerald" ? "border-emerald-400 bg-emerald-50" :
-                    productScore.color === "amber" ? "border-amber-400 bg-amber-50" :
-                    productScore.color === "orange" ? "border-orange-400 bg-orange-50" :
-                    "border-red-400 bg-red-50"}`}>
-                  <span className={`text-xl font-bold
-                    ${productScore.color === "emerald" ? "text-emerald-600" :
-                      productScore.color === "amber" ? "text-amber-600" :
-                      productScore.color === "orange" ? "text-orange-600" :
-                      "text-red-600"}`}>
-                    {productScore.score}<span className="text-xs font-medium text-slate-400">/100</span>
+                <div
+                  className={`w-20 h-20 rounded-full flex items-center justify-center border-4
+                  ${productScore.color === "emerald"
+                    ? "border-emerald-400 bg-emerald-50"
+                    : productScore.color === "amber"
+                    ? "border-amber-400 bg-amber-50"
+                    : productScore.color === "orange"
+                    ? "border-orange-400 bg-orange-50"
+                    : "border-red-400 bg-red-50"}`}
+                >
+                  <span
+                    className={`text-xl font-bold
+                    ${productScore.color === "emerald"
+                      ? "text-emerald-600"
+                      : productScore.color === "amber"
+                      ? "text-amber-600"
+                      : productScore.color === "orange"
+                      ? "text-orange-600"
+                      : "text-red-600"}`}
+                  >
+                    {productScore.score}
+                    <span className="text-xs font-medium text-slate-400">/100</span>
                   </span>
                 </div>
-                <span className={`mt-2 text-[11px] font-semibold px-3 py-1 rounded-full text-white
-                  ${productScore.color === "emerald" ? "bg-emerald-500" :
-                    productScore.color === "amber" ? "bg-amber-500" :
-                    productScore.color === "orange" ? "bg-orange-500" :
-                    "bg-red-500"}`}>
+                <span
+                  className={`mt-2 text-[11px] font-semibold px-3 py-1 rounded-full text-white
+                  ${productScore.color === "emerald"
+                    ? "bg-emerald-500"
+                    : productScore.color === "amber"
+                    ? "bg-amber-500"
+                    : productScore.color === "orange"
+                    ? "bg-orange-500"
+                    : "bg-red-500"}`}
+                >
                   {productScore.label}
                 </span>
-                <p className="text-[10px] text-slate-400 mt-1">{result.matched.length} PE / {result.ingredients.length}</p>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  {result.matched.length} PE / {result.ingredients.length}
+                </p>
+
+                {result.matched.length === 0 && (
+                  <p className="text-xs text-slate-400 mt-3 text-center max-w-[220px]">
+                    Ce produit ne contient aucun perturbateur endocrinien identifié à ce jour. Toutefois,
+                    cela ne signifie pas pour autant qu’il soit bénéfique pour la santé.
+                  </p>
+                )}
               </div>
             </div>
 
             {allEffects.length > 0 && (
               <div className="mt-4 pt-4 border-t border-slate-100">
-                <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-2">Effets endocriniens détectés</p>
+                <p className="text-[11px] text-slate-400 uppercase tracking-wider font-medium mb-2">
+                  Effets endocriniens détectés
+                </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {allEffects.map(e => (
+                  {allEffects.map((e) => (
                     <EffectTag key={e} effect={e} size="md" />
                   ))}
                 </div>
@@ -254,7 +312,7 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
                         <p className="text-xs text-slate-500 mt-0.5">{m.note}</p>
                         {m.effects && m.effects.length > 0 && (
                           <div className="flex flex-wrap gap-1 mt-2">
-                            {m.effects.map(e => (
+                            {m.effects.map((e) => (
                               <EffectTag key={e} effect={e} size="sm" />
                             ))}
                           </div>
@@ -264,16 +322,16 @@ export default function SearchPage({ initialCode, clearInitialCode }) {
                   </div>
                 );
               })}
+
               {result.ingredients
-                .filter(ing => !result.matched.some(m => m.name.toLowerCase() === ing.toLowerCase()))
+                .filter((ing) => !result.matched.some((m) => m.name.toLowerCase() === ing.toLowerCase()))
                 .map((ing, i) => (
                   <div key={`s-${i}`} className="flex items-center gap-3 px-4 py-2">
                     <div className="w-2 h-2 bg-emerald-400 rounded-full shrink-0" />
                     <span className="text-sm text-slate-600">{ing}</span>
                     <span className="text-[10px] text-slate-400 ml-auto">OK</span>
                   </div>
-                ))
-              }
+                ))}
             </div>
           </div>
         </div>

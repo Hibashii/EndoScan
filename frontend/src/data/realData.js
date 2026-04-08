@@ -1,133 +1,147 @@
-// ============================================
-// Effect categories — the health impacts we track
-// ============================================
+// Généré automatiquement par compute_stats.py — ne pas modifier.
+
 export const EFFECT_CATEGORIES = {
-  thyroid:       { label: "Thyroïde",       emoji: "🦋", color: "violet" },
-  estrogenic:    { label: "Estrogénique",   emoji: "♀️", color: "pink" },
-  androgenic:    { label: "Androgénique",   emoji: "♂️", color: "blue" },
-  reproductive:  { label: "Reproductif",    emoji: "🧬", color: "rose" },
-  cancer:        { label: "Cancer",         emoji: "⚠️", color: "red" },
-  neurological:  { label: "Neurologique",   emoji: "🧠", color: "amber" },
-  immune:        { label: "Immunitaire",    emoji: "🛡️", color: "emerald" },
+  thyroid:      { label: "Thyroïde",      emoji: "🦋", color: "violet"  },
+  estrogenic:   { label: "Estrogénique",  emoji: "♀️", color: "pink"    },
+  androgenic:   { label: "Androgénique",  emoji: "♂️", color: "blue"    },
+  reproductive: { label: "Reproductif",   emoji: "🧬", color: "rose"    },
+  cancer:       { label: "Cancer",        emoji: "⚠️", color: "red"     },
+  neurological: { label: "Neurologique",  emoji: "🧠", color: "amber"   },
+  immune:       { label: "Immunitaire",   emoji: "🛡️", color: "emerald" },
 };
 
-// ============================================
-// Dashboard Stats (Calculated from REAL Open Food/Beauty Facts data)
-// ============================================
 export const DASHBOARD_STATS = {
-  totalProducts: 1288180,
-  percentWithPE: 10,
+  totalProducts:       1288182,
+  totalBeauty:         17914,
+  totalFood:           1270268,
+  percentWithPE:       0.2,
   totalSubstancesTEDX: 1039,
-  totalWithEffects: 1039,
-  topSubstances: [
+  topSubstances:       [
     {
-        "name": "Iron",
-        "pct": 67,
-        "risk": "medium"
-    },
-    {
-        "name": "Vitamin e",
-        "pct": 15,
+        "name": "Lily aldehyde",
+        "pct": 30.9,
         "risk": "low"
     },
     {
-        "name": "Zinc",
-        "pct": 12,
-        "risk": "medium"
+        "name": "Styrene",
+        "pct": 24.1,
+        "risk": "high"
     },
     {
-        "name": "Ethanol",
-        "pct": 5,
-        "risk": "medium"
-    },
-    {
-        "name": "Zinc oxide",
-        "pct": 5,
-        "risk": "medium"
-    },
-    {
-        "name": "Perc",
-        "pct": 4,
-        "risk": "medium"
-    },
-    {
-        "name": "Aurin",
-        "pct": 4,
+        "name": "Octocrylene",
+        "pct": 13.5,
         "risk": "low"
     },
     {
-        "name": "Manganese",
-        "pct": 3,
+        "name": "Dibutyl adipate",
+        "pct": 8.0,
         "risk": "low"
+    },
+    {
+        "name": "Homomenthyl salicylate",
+        "pct": 6.2,
+        "risk": "medium"
+    },
+    {
+        "name": "Resorcinol",
+        "pct": 3.6,
+        "risk": "high"
+    },
+    {
+        "name": "Ethyl alcohol",
+        "pct": 2.8,
+        "risk": "medium"
+    },
+    {
+        "name": "Imazalil",
+        "pct": 2.7,
+        "risk": "high"
     }
 ],
-  byEffect: [
+  byEffect:            [
     {
-        "effect": "reproductive",
-        "label": "Reproductif",
-        "count": 97392,
-        "pct": 76
+        "effect": "estrogenic",
+        "label": "Estrogénique",
+        "count": 2374,
+        "pct": 77.7
     },
     {
         "effect": "androgenic",
-        "label": "Androg\u00e9nique",
-        "count": 23041,
-        "pct": 18
+        "label": "Androgénique",
+        "count": 1274,
+        "pct": 41.7
+    },
+    {
+        "effect": "reproductive",
+        "label": "Reproductif",
+        "count": 1163,
+        "pct": 38.1
     },
     {
         "effect": "cancer",
         "label": "Cancer",
-        "count": 22718,
-        "pct": 18
+        "count": 1129,
+        "pct": 36.9
     },
     {
         "effect": "neurological",
         "label": "Neurologique",
-        "count": 18823,
-        "pct": 15
+        "count": 979,
+        "pct": 32.0
     },
     {
         "effect": "thyroid",
-        "label": "Thyro\u00efde",
-        "count": 18703,
-        "pct": 15
-    },
-    {
-        "effect": "estrogenic",
-        "label": "Estrog\u00e9nique",
-        "count": 14932,
-        "pct": 12
+        "label": "Thyroïde",
+        "count": 370,
+        "pct": 12.1
     }
 ],
-  byCategory: [
+  byCategory:          [
     {
-        "cat": "Shampoing",
-        "pct": 48
+        "cat": "Cosmétiques (maquillage)",
+        "pct": 12,
+        "total": 351
     },
     {
         "cat": "Gel douche",
-        "pct": 36
+        "pct": 12,
+        "total": 712
     },
     {
-        "cat": "Dentifrice",
-        "pct": 27
+        "cat": "Shampoing",
+        "pct": 11,
+        "total": 2105
     },
     {
         "cat": "Soins visage",
-        "pct": 21
+        "pct": 8,
+        "total": 1231
     },
     {
-        "cat": "Snacks",
-        "pct": 12
+        "cat": "Dentifrice",
+        "pct": 2,
+        "total": 832
+    },
+    {
+        "cat": "Produits laitiers",
+        "pct": 0,
+        "total": 76490
     },
     {
         "cat": "Boissons",
-        "pct": 7
+        "pct": 0,
+        "total": 91405
     },
     {
-        "cat": "Conserves",
-        "pct": 5
+        "cat": "Snacks",
+        "pct": 0,
+        "total": 104173
+    },
+    {
+        "cat": "Conserves / sauces",
+        "pct": 0,
+        "total": 9855
     }
 ],
-  cosmVsFood: { "cosm": 56, "food": 9 }
+  cosmVsFood:          { "cosm": 11, "food": 0 },
 };
